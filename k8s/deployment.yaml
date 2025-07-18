@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoshare-app
+  namespace: photoshare
+  labels:
+    app: photoshare
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: photoshare
+  template:
+    metadata:
+      labels:
+        app: photoshare
+    spec:
+      containers:
+      - name: photoshare
+        image: photoshare:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: VITE_SUPABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: photoshare-config
+              key: VITE_SUPABASE_URL
+        - name: VITE_SUPABASE_ANON_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: photoshare-config
+              key: VITE_SUPABASE_ANON_KEY
+        - name: VITE_SUPABASE_STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: photoshare-config
+              key: VITE_SUPABASE_STORAGE_BUCKET
+        volumeMounts:
+        - name: photoshare-storage
+          mountPath: /usr/share/nginx/html/uploads
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: photoshare-storage
+        persistentVolumeClaim:
+          claimName: photoshare-pvc
